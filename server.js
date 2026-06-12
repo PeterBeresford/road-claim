@@ -235,6 +235,8 @@ const DRIVER_FORM = `<!DOCTYPE html>
   var TYPES = ['Taxi','Train','Metro / Local bus','Meals','Hotel','Ferry','Fuel','Tolls','Parking','Other'];
   var rowCount = 0;
   var rows = [];
+  // Wake server on form load
+  fetch('/submissions').catch(function(){});
 
   function addRow() {
     rowCount++;
