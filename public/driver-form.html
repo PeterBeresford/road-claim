@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#1a1a1a">
+<title>RoadClaim — Driver Expenses</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1a1a; --mid: #666; --light: #999; --rule: #e0ddd8;
+    --bg: #f5f3ee; --white: #fff; --accent: #c8392b; --accent-light: #fdf0ee;
+    --green: #2a7a4b; --green-light: #e8f4ee; --blue: #1a5fa8;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; padding-bottom: 6rem; }
+
+  .app-header { background: var(--ink); color: white; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 100; }
+  .app-title { font-size: 1rem; font-weight: 600; }
+  .app-sub { font-size: 0.68rem; color: #888; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; }
+  .app-version { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #555; margin-left: auto; }
+
+  .section { background: var(--white); border-bottom: 1px solid var(--rule); padding: 1.25rem; margin-bottom: 0.5rem; }
+  .section-title { font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 1rem; }
+
+  .field-group { margin-bottom: 1rem; }
+  .field-group:last-child { margin-bottom: 0; }
+  .field-group label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--mid); margin-bottom: 0.35rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .field-group input, .field-group select, .field-group textarea { width: 100%; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; padding: 0.6rem 0.75rem; border-radius: 2px; -webkit-appearance: none; }
+  .field-group input:focus, .field-group select:focus { outline: none; border-color: var(--ink); background: var(--white); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  .currency-bar { background: #f0ede8; padding: 0.6rem 1.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--rule); }
+  .currency-bar .clabel { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--light); }
+  .currency-pill { font-family: 'DM Mono', monospace; font-size: 0.7rem; background: var(--ink); color: white; padding: 0.15rem 0.6rem; border-radius: 2px; }
+
+  .expense-row { background: var(--white); border: 1px solid var(--rule); margin: 0 1.25rem 0.75rem; border-radius: 2px; }
+  .expense-row.prepaid-row { background: var(--green-light); border-color: #b2d8c0; }
+  .row-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f8f7f4; border-bottom: 1px solid var(--rule); }
+  .row-num { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--light); flex-shrink: 0; }
+  .row-sterling { font-family: 'DM Mono', monospace; font-size: 0.85rem; font-weight: 500; margin-left: auto; color: var(--green); }
+  .row-sterling.is-prepaid { color: var(--light); font-style: italic; font-size: 0.72rem; }
+  .row-body { padding: 0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .row-body .full { grid-column: 1 / -1; }
+  .row-body label { display: block; font-size: 0.62rem; font-weight: 600; color: var(--light); margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .row-body input, .row-body select { width: 100%; border: 1px solid var(--rule); background: var(--bg); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; padding: 0.45rem 0.6rem; border-radius: 2px; -webkit-appearance: none; }
+  .row-body input:focus, .row-body select:focus { outline: none; border-color: var(--ink); background: white; }
+  .row-footer { padding: 0.5rem 0.75rem; border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 0.75rem; }
+  .prepaid-toggle { display: flex; align-items: center; gap: 0.5rem; }
+  .prepaid-toggle label { font-size: 0.72rem; color: var(--mid); }
+  .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--rule); border-radius: 20px; transition: 0.2s; cursor: pointer; }
+  .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+  input:checked + .toggle-slider { background: var(--green); }
+  input:checked + .toggle-slider::before { transform: translateX(16px); }
+  .btn-del { margin-left: auto; background: none; border: none; color: var(--light); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.4rem; line-height: 1; }
+  .btn-del:hover { color: var(--accent); }
+
+  .rate-row { display: flex; gap: 0.5rem; align-items: flex-end; }
+  .rate-row input { flex: 1; }
+  .btn-fetch { font-family: 'DM Mono', monospace; font-size: 0.65rem; background: var(--ink); color: white; border: none; padding: 0.45rem 0.65rem; border-radius: 2px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .btn-fetch:active { opacity: 0.8; }
+
+  .total-bar { background: var(--ink); color: white; padding: 0.9rem 1.25rem; position: sticky; bottom: 5rem; z-index: 50; display: flex; align-items: baseline; gap: 0.5rem; }
+  .total-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #888; }
+  .total-amount { font-family: 'DM Mono', monospace; font-size: 1.4rem; font-weight: 500; }
+  .total-note { font-size: 0.62rem; color: #666; margin-left: auto; font-style: italic; }
+
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--rule); padding: 0.75rem 1.25rem; display: flex; gap: 0.75rem; z-index: 100; }
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border: none; padding: 0.75rem 1.1rem; border-radius: 2px; cursor: pointer; }
+  .btn-add { background: #f0ede8; color: var(--ink); border: 1px solid var(--rule); flex: 1; }
+  .btn-submit { background: var(--accent); color: white; flex: 2; }
+  .btn-submit:active { opacity: 0.9; }
+
+  .submit-confirm { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: flex-end; }
+  .submit-confirm.show { display: flex; }
+  .confirm-box { background: var(--white); width: 100%; padding: 1.5rem 1.25rem; border-radius: 8px 8px 0 0; }
+  .confirm-box h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+  .confirm-box p { font-size: 0.82rem; color: var(--mid); margin-bottom: 1rem; line-height: 1.5; }
+  .confirm-summary { background: var(--bg); padding: 0.75rem; border-radius: 2px; font-size: 0.8rem; line-height: 1.7; margin-bottom: 1rem; font-family: 'DM Mono', monospace; }
+  .confirm-actions { display: flex; gap: 0.75rem; }
+  .btn-cancel { background: #f0ede8; color: var(--ink); flex: 1; }
+  .btn-confirm { background: var(--accent); color: white; flex: 2; }
+
+  .hint { font-size: 0.72rem; color: var(--mid); margin-top: 0.4rem; line-height: 1.4; }
+
+  @media (min-width: 600px) {
+    .section, .currency-bar { max-width: 600px; margin-left: auto; margin-right: auto; }
+    .expense-row { max-width: 600px; margin-left: auto; margin-right: auto; }
+    .total-bar, .bottom-bar { max-width: 600px; margin: 0 auto; }
+    .bottom-bar { left: 50%; transform: translateX(-50%); width: 600px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <div class="app-title">RoadClaim</div>
+    <div class="app-sub">Driver Expenses</div>
+  </div>
+  <div class="app-version">v1.8</div>
+</div>
+
+<!-- DRIVER INFO -->
+<div class="section">
+  <div class="section-title">Driver</div>
+  <div class="field-group"><label>Your name</label><input type="text" id="driverName" placeholder="First and last name" autocomplete="name"></div>
+  <div class="two-col">
+    <div class="field-group"><label>Tour / production</label><input type="text" id="tourName" placeholder="e.g. The Neighbourhood"></div>
+    <div class="field-group"><label>Truck / vehicle</label><input type="text" id="truckNo" placeholder="e.g. TC-04"></div>
+  </div>
+  <div class="two-col">
+    <div class="field-group"><label>Date out</label><input type="date" id="dateOut"></div>
+    <div class="field-group"><label>Date return</label><input type="date" id="dateReturn"></div>
+  </div>
+  <div class="field-group"><label>Float received (£)</label><input type="number" id="floatAmount" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+  <div class="hint">Cash advance given before departure. Leave blank if none.</div></div>
+</div>
+
+<!-- EXPENSES -->
+<div class="section" style="padding-bottom:0.5rem">
+  <div class="section-title">Expenses</div>
+  <p class="hint" style="margin-bottom:1rem">Add one row per expense. Use the currency where you spent — sterling converts automatically.</p>
+</div>
+
+<div class="currency-bar">
+  <span class="clabel">Currencies used</span>
+  <span id="currencyPills" style="color:var(--light);font-size:0.72rem;font-style:italic">none yet</span>
+</div>
+
+<div id="expenseRows"></div>
+
+<div style="padding:0.75rem 1.25rem 5rem">
+  <button class="btn btn-add" onclick="addRow()" style="width:100%;padding:0.85rem">+ Add expense row</button>
+</div>
+
+<!-- TOTAL BAR -->
+<div class="total-bar">
+  <span class="total-label">Total claimed</span>
+  <span class="total-amount" id="grandTotal">£0.00</span>
+  <span class="total-note" id="floatNote"></span>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <button class="btn btn-submit" onclick="showSubmitConfirm()">Submit expenses →</button>
+</div>
+
+<!-- CONFIRM OVERLAY -->
+<div class="submit-confirm" id="submitConfirm">
+  <div class="confirm-box">
+    <h3>Ready to submit?</h3>
+    <p>Check the summary below. When you tap <strong>Submit</strong>, your expenses will be sent directly to the dashboard.</p>
+    <div class="confirm-summary" id="confirmSummary"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-cancel" onclick="hideSubmitConfirm()">Back</button>
+      <button class="btn btn-confirm" onclick="confirmSubmit()">Submit →</button>
+      <button class="btn btn-confirm" style="background:#2a7a4b" onclick="downloadJSON()">Download file →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── CONFIGURATION ─────────────────────────────────────────
+  var SUBMIT_EMAIL = 'psberesford@yahoo.co.uk'; // ← change this before sending to drivers
+  // ─────────────────────────────────────────────────────────
+
+  var TYPES = ['Taxi','Train','Metro / Local bus','Meals','Hotel','Ferry','Fuel','Tolls','Parking','Other'];
+  var rowCount = 0;
+  var rows = [];
+
+  function addRow() {
+    rowCount++;
+    var n = rowCount;
+    rows.push(n);
+    var div = document.createElement('div');
+    div.className = 'expense-row';
+    div.id = 'row-' + n;
+    div.innerHTML =
+      '<div class="row-header">' +
+        '<span class="row-num">#' + n + '</span>' +
+        '<select id="type-' + n + '" style="border:none;background:transparent;font-family:DM Sans,sans-serif;font-size:0.82rem;font-weight:600;color:var(--ink);padding:0;max-width:120px" onchange="onTypeChange(' + n + ')">' +
+          TYPES.map(function(t,i){ return '<option'+(i===0?' selected':'')+'>'+t+'</option>'; }).join('') +
+        '</select>' +
+        '<span class="row-sterling" id="sterling-' + n + '">—</span>' +
+        '<button class="btn-del" onclick="deleteRow(' + n + ')" title="Remove">✕</button>' +
+      '</div>' +
+      '<div class="row-body">' +
+        '<div><label>Date</label><input type="date" id="date-' + n + '"></div>' +
+        '<div><label>Country</label><input type="text" id="country-' + n + '" placeholder="e.g. PL" maxlength="3" oninput="onCountryInput(' + n + ')"></div>' +
+        '<div class="full"><label>Description (optional)</label><input type="text" id="notes-' + n + '" placeholder="e.g. Motorway toll A4"></div>' +
+        '<div><label>Amount</label><input type="number" id="amt-' + n + '" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcRow(' + n + ')"></div>' +
+        '<div><label>Currency</label><input type="text" id="cur-' + n + '" placeholder="GBP" maxlength="3" style="text-transform:uppercase" oninput="calcRow(' + n + ');updateCurrencies()"></div>' +
+        '<div class="full"><label>Rate to GBP <span style="font-weight:400;text-transform:none">(auto-fetched)</span></label>' +
+          '<div class="rate-row"><input type="number" id="rate-' + n + '" placeholder="1.00" step="0.0001" min="0" inputmode="decimal" oninput="calcRow(' + n + ')"><button class="btn-fetch" onclick="autoFetchRate(' + n + ')">Fetch</button></div></div>' +
+      '</div>' +
+      '<div class="row-footer">' +
+        '<div class="prepaid-toggle">' +
+          '<label class="toggle-switch"><input type="checkbox" id="prepaid-' + n + '" onchange="onPrepaidChange(' + n + ')"><span class="toggle-slider"></span></label>' +
+          '<label for="prepaid-' + n + '">Company prepaid — record only</label>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('expenseRows').appendChild(div);
+    setTimeout(function(){ div.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+  }
+
+  function deleteRow(n) {
+    var el = document.getElementById('row-' + n);
+    if (el) el.remove();
+    rows = rows.filter(function(r){ return r !== n; });
+    updateTotal(); updateCurrencies();
+  }
+
+  function onTypeChange(n) {
+    var type = document.getElementById('type-' + n).value;
+    if (type === 'Fuel' || type === 'Tolls' || type === 'Parking') {
+      var c = document.getElementById('country-' + n);
+      if (!c.value) c.focus();
+    }
+  }
+
+  function onCountryInput(n) {
+    var v = document.getElementById('country-' + n).value.toUpperCase();
+    document.getElementById('country-' + n).value = v;
+    var MAP = { GB:'GBP',US:'USD',DE:'EUR',FR:'EUR',IT:'EUR',ES:'EUR',PL:'PLN',CZ:'CZK',CH:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',NL:'EUR',BE:'EUR',AT:'EUR' };
+    if (v.length === 2 && MAP[v]) {
+      document.getElementById('cur-' + n).value = MAP[v];
+      updateCurrencies();
+      autoFetchRate(n);
+    }
+  }
+
+  // Fallback rates (approximate — updated April 2026)
+  var FALLBACK_RATES = {
+    EUR:0.856, CHF:0.894, PLN:0.197, CZK:0.034, SEK:0.074,
+    NOK:0.072, DKK:0.115, HUF:0.0021, HRK:0.113, RON:0.172,
+    USD:0.792, CAD:0.578, AUD:0.502, JPY:0.0053
+  };
+
+  function autoFetchRate(n) {
+    var cur = (document.getElementById('cur-' + n).value || '').toUpperCase().trim();
+    if (!cur || cur === 'GBP') {
+      document.getElementById('rate-' + n).value = '1';
+      clearRateNote(n); calcRow(n); return;
+    }
+    var cell = document.getElementById('sterling-' + n);
+    cell.textContent = '⏳';
+    fetch('https://api.frankfurter.app/latest?from=' + cur + '&to=GBP')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject('status ' + r.status); })
+      .then(function(d){
+        if (d.rates && d.rates.GBP) {
+          document.getElementById('rate-' + n).value = d.rates.GBP.toFixed(6);
+          setRateNote(n, 'Live rate ✓', false);
+          calcRow(n);
+        } else { throw new Error('no rate'); }
+      })
+      .catch(function(){
+        // API failed — use fallback
+        if (FALLBACK_RATES[cur]) {
+          document.getElementById('rate-' + n).value = FALLBACK_RATES[cur].toFixed(6);
+          setRateNote(n, '⚠ Approx rate — check manually', true);
+          calcRow(n);
+        } else {
+          cell.textContent = '—';
+          setRateNote(n, '⚠ Unknown currency — enter rate manually', true);
+        }
+      });
+  }
+
+  function setRateNote(n, msg, isWarn) {
+    var id = 'ratenote-' + n;
+    var el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = 'font-size:0.68rem;margin-top:0.25rem;';
+      var rateRow = document.getElementById('rate-' + n);
+      if (rateRow && rateRow.parentNode) rateRow.parentNode.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.color = isWarn ? 'var(--accent)' : 'var(--green)';
+  }
+
+  function clearRateNote(n) {
+    var el = document.getElementById('ratenote-' + n);
+    if (el) el.textContent = '';
+  }
+
+  function onPrepaidChange(n) {
+    var prepaid = document.getElementById('prepaid-' + n).checked;
+    var row = document.getElementById('row-' + n);
+    var cell = document.getElementById('sterling-' + n);
+    if (prepaid) {
+      row.classList.add('prepaid-row');
+      cell.textContent = 'prepaid'; cell.classList.add('is-prepaid');
+      ['amt-','rate-','cur-'].forEach(function(p){ var el=document.getElementById(p+n); if(el){el.disabled=true;el.style.opacity='0.4';} });
+    } else {
+      row.classList.remove('prepaid-row');
+      cell.classList.remove('is-prepaid');
+      ['amt-','rate-','cur-'].forEach(function(p){ var el=document.getElementById(p+n); if(el){el.disabled=false;el.style.opacity='1';} });
+      calcRow(n);
+    }
+    updateTotal();
+  }
+
+  function calcRow(n) {
+    if (document.getElementById('prepaid-' + n) && document.getElementById('prepaid-' + n).checked) return;
+    var amt = parseFloat(document.getElementById('amt-' + n).value) || 0;
+    var rate = parseFloat(document.getElementById('rate-' + n).value) || 1;
+    var cur = (document.getElementById('cur-' + n).value || 'GBP').toUpperCase().trim();
+    var cell = document.getElementById('sterling-' + n);
+    if (cur === 'GBP') rate = 1;
+    if (amt > 0) { cell.textContent = '£' + (amt * rate).toFixed(2); cell.classList.remove('is-prepaid'); }
+    else { cell.textContent = '—'; }
+    updateTotal();
+  }
+
+  function updateTotal() {
+    var total = 0;
+    rows.forEach(function(n){
+      var cell = document.getElementById('sterling-' + n);
+      if (cell && !cell.classList.contains('is-prepaid') && cell.textContent !== '—' && cell.textContent !== '⏳') {
+        total += parseFloat(cell.textContent.replace('£','')) || 0;
+      }
+    });
+    document.getElementById('grandTotal').textContent = '£' + total.toFixed(2);
+    var fl = parseFloat(document.getElementById('floatAmount').value) || 0;
+    var note = document.getElementById('floatNote');
+    if (fl > 0) {
+      var bal = total - fl;
+      note.textContent = bal >= 0 ? '(float £'+fl.toFixed(2)+' — balance due £'+bal.toFixed(2)+')' : '(float £'+fl.toFixed(2)+' — overspend £'+Math.abs(bal).toFixed(2)+')';
+    } else { note.textContent = ''; }
+  }
+
+  function updateCurrencies() {
+    var seen = [];
+    rows.forEach(function(n){
+      var cur = (document.getElementById('cur-' + n) || {}).value;
+      var pb = document.getElementById('prepaid-' + n);
+      if (cur && !(pb && pb.checked) && seen.indexOf(cur.toUpperCase()) < 0) seen.push(cur.toUpperCase());
+    });
+    var c = document.getElementById('currencyPills');
+    c.innerHTML = seen.length === 0
+      ? '<span style="color:var(--light);font-size:0.72rem;font-style:italic">none yet</span>'
+      : seen.map(function(s){ return '<span class="currency-pill">'+s+'</span>'; }).join(' ');
+  }
+
+  function buildData() {
+    var data = {
+      version: '1.8',
+      submittedAt: new Date().toISOString(),
+      driver: document.getElementById('driverName').value,
+      tour: document.getElementById('tourName').value,
+      truck: document.getElementById('truckNo').value,
+      dateOut: document.getElementById('dateOut').value,
+      dateReturn: document.getElementById('dateReturn').value,
+      floatReceived: parseFloat(document.getElementById('floatAmount').value) || 0,
+      rows: []
+    };
+    rows.forEach(function(n){
+      var row = document.getElementById('row-' + n);
+      if (!row) return;
+      var prepaid = document.getElementById('prepaid-' + n).checked;
+      var sCell = document.getElementById('sterling-' + n);
+      data.rows.push({
+        n: n,
+        date: document.getElementById('date-' + n).value,
+        type: document.getElementById('type-' + n).value,
+        country: document.getElementById('country-' + n).value,
+        currency: document.getElementById('cur-' + n).value,
+        amount: document.getElementById('amt-' + n).value,
+        rate: document.getElementById('rate-' + n).value,
+        sterling: prepaid ? 'prepaid' : (sCell ? sCell.textContent : ''),
+        prepaid: prepaid,
+        notes: document.getElementById('notes-' + n) ? document.getElementById('notes-' + n).value : ''
+      });
+    });
+    return data;
+  }
+
+  function showSubmitConfirm() {
+    // Check for any rows with missing rates
+    var missing = [];
+    rows.forEach(function(n){
+      var prepaid = document.getElementById('prepaid-' + n);
+      if (prepaid && prepaid.checked) return;
+      var cur = (document.getElementById('cur-' + n).value || '').toUpperCase().trim();
+      var rate = document.getElementById('rate-' + n).value;
+      var amt = document.getElementById('amt-' + n).value;
+      if (amt && cur && cur !== 'GBP' && !rate) missing.push(n);
+    });
+    if (missing.length > 0) {
+      alert('Row' + (missing.length > 1 ? 's ' : ' ') + missing.join(', ') +
+        ' have foreign currency amounts but no exchange rate.\n\nTap the Fetch button on those rows, or enter the rate manually.');
+      return;
+    }
+    var driver = document.getElementById('driverName').value || 'Not entered';
+    var tour = document.getElementById('tourName').value || 'Not entered';
+    var dateOut = document.getElementById('dateOut').value || '—';
+    var dateRet = document.getElementById('dateReturn').value || '—';
+    var total = document.getElementById('grandTotal').textContent;
+    var fl = parseFloat(document.getElementById('floatAmount').value) || 0;
+    document.getElementById('confirmSummary').innerHTML =
+      'Driver: ' + driver + '\n' +
+      'Tour:   ' + tour + '\n' +
+      'Dates:  ' + dateOut + ' → ' + dateRet + '\n' +
+      (fl > 0 ? 'Float:  £' + fl.toFixed(2) + '\n' : '') +
+      'Total:  ' + total;
+    document.getElementById('submitConfirm').classList.add('show');
+  }
+
+  function hideSubmitConfirm() {
+    document.getElementById('submitConfirm').classList.remove('show');
+  }
+
+  function downloadJSON() {
+    hideSubmitConfirm();
+    var data = buildData();
+    if (!data) return;
+    var filename = 'roadclaim-' + (data.driver||'driver').toLowerCase().replace(/\s+/g,'-') + '-' + (data.tour||'tour').toLowerCase().replace(/\s+/g,'-') + '.json';
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function confirmSubmit() {
+    hideSubmitConfirm();
+    var data = buildData();
+    if (!data) return;
+
+    // Show sending message
+    var btn = document.querySelector('.btn-submit');
+    if (btn) { btn.textContent = 'Sending...'; btn.disabled = true; }
+
+    fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.success) {
+        document.querySelector('.form-wrap').innerHTML =
+          '<div style="text-align:center;padding:3rem 1rem">' +
+          '<div style="font-size:2.5rem;margin-bottom:1rem">✓</div>' +
+          '<h2 style="font-size:1.2rem;font-weight:600;margin-bottom:0.5rem">Expenses submitted</h2>' +
+          '<p style="font-size:0.85rem;color:#666">Your submission has been received. You will be notified when it is approved.</p>' +
+          '</div>';
+      } else {
+        alert('Submission failed. Please try again.');
+        if (btn) { btn.textContent = 'Submit expenses →'; btn.disabled = false; }
+      }
+    })
+    .catch(function() {
+      alert('Could not reach the server. Please check your connection and try again.');
+      if (btn) { btn.textContent = 'Submit expenses →'; btn.disabled = false; }
+    });
+  }
+
+  document.getElementById('floatAmount').addEventListener('input', updateTotal);
+
+  // Start with 3 rows
+  for (var i = 0; i < 3; i++) addRow();
+</script>
+</body>
+</html>
